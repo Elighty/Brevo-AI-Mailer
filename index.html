@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Campaign writer</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1d1a33;--paper:#eceaf6;--mute:#625f80;--line:#c6c2e0;--blue:#3a2bff;--sun:#ffd23f}
+*{box-sizing:border-box}
+body{margin:0;color:var(--ink);background:var(--paper);font:16px/1.5 system-ui,sans-serif}
+main{display:grid;grid-template-columns:minmax(340px,480px) 1fr;min-height:100vh}
+aside{padding:40px 36px}
+h1{font:800 clamp(34px,4vw,46px)/1 'Bricolage Grotesque','Arial Black',sans-serif;letter-spacing:-.02em;margin:0 0 10px}
+.sub{color:var(--mute);margin:0 0 28px;max-width:34ch}
+section{border-top:1px solid var(--line);padding:22px 0}
+h2{font:700 19px/1.2 'Bricolage Grotesque',system-ui,sans-serif;margin:0 0 4px}
+label{display:block;font-size:14px;font-weight:600;margin:14px 0 4px}
+input,textarea,select{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:6px;background:#fff;color:inherit;font:inherit}
+input:focus,textarea:focus,select:focus,button:focus-visible{outline:3px solid var(--blue);outline-offset:1px}
+textarea{min-height:90px;resize:vertical}
+button{padding:12px 20px;border:0;border-radius:6px;background:var(--ink);color:#fff;font:700 15px system-ui,sans-serif;cursor:pointer}
+button.write{background:var(--sun);color:var(--ink)}
+button.send{background:var(--blue)}
+button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+button:disabled{opacity:.5;cursor:wait}
+.row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.row input{flex:1;min-width:180px}
+progress{width:100%;height:10px;margin-top:18px;accent-color:var(--blue)}
+.note{font-size:14px;color:var(--mute);margin:8px 0 0}
+#msg{min-height:24px;margin:0 0 8px;font-size:14px;color:var(--mute)}
+#msg.err{color:#c4161c;font-weight:600}
+.stage{background:var(--blue);display:grid;place-items:center;padding:32px}
+iframe{width:min(100%,440px);height:min(88vh,820px);border:0;border-radius:18px;background:#fff;box-shadow:0 20px 60px #0004}
+[hidden]{display:none!important}
+@media(max-width:860px){main{grid-template-columns:1fr}aside{padding:28px 20px}.stage{padding:20px}}
+</style>
+</head>
+<body>
+<main>
+<aside>
+  <h1>Turn a link into a click.</h1>
+  <p class="sub">Paste your music link and Claude writes the email. Upload your list and it goes out 300 a day.</p>
+
+  <section>
+    <h2>1. Brief</h2>
+    <label for="link">Link to your music</label>
+    <input id="link" placeholder="https://open.spotify.com/album/...">
+    <label for="notes">What should people know? (optional)</label>
+    <textarea id="notes" placeholder="New EP out Friday. Written after I moved to Lagos. Afrobeats meets soul."></textarea>
+    <label for="tone">Tone</label>
+    <select id="tone"><option>warm and personal</option><option>hype and energetic</option><option>mysterious and cinematic</option><option>short and punchy</option></select>
+    <div class="row"><button id="gen" class="write">Write my email</button></div>
+  </section>
+
+  <p id="msg"></p>
+
+  <div id="editor" hidden>
+    <section>
+      <h2>2. Edit</h2>
+      <label for="subject">Subject line</label><input id="subject">
+      <label for="pre">Preview text</label><input id="pre">
+      <label for="headline">Headline</label><input id="headline">
+      <label for="body">Body (blank line starts a new paragraph)</label><textarea id="body" style="min-height:190px"></textarea>
+      <label for="cta">Button text</label><input id="cta">
+    </section>
+  </div>
+
+  <section>
+    <h2>3. Subscribers</h2>
+    <label for="file">Upload a CSV or text file</label><input id="file" type="file" accept=".csv,.txt">
+    <label for="paste">Or paste emails</label><textarea id="paste"></textarea>
+    <div class="row"><button id="add">Clean and add</button></div>
+    <p id="report" class="note"></p>
+  </section>
+
+  <section>
+    <h2>4. Send</h2>
+    <div class="row"><input id="testTo" type="email" placeholder="you@example.com" aria-label="Test email address"><button id="test">Send test</button></div>
+    <div class="row"><button id="go" class="send">Start sending</button><button id="pause" class="ghost">Pause</button></div>
+    <progress id="bar" max="1" value="0"></progress>
+    <p id="stat" class="note"></p>
+    <div class="row"><button id="redo" class="ghost">Start over</button><button id="clear" class="ghost">Remove all subscribers</button></div>
+  </section>
+</aside>
+<div class="stage">
+  <iframe id="frame" sandbox title="Email preview" srcdoc="<body style='margin:0;display:grid;place-items:center;height:100vh;font:16px system-ui;color:#625f80'>Your email appears here</body>"></iframe>
+</div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const n = x => Number(x).toLocaleString();
+let pw = sessionStorage.getItem('pw') || '', copy = {}, timer;
+const msg = (t, err) => { $('msg').textContent = t; $('msg').className = err ? 'err' : ''; };
+
+async function api(path, body) {
+  const r = await fetch('/api/' + path, {
+    method: body ? 'POST' : 'GET',
+    headers: { 'content-type': 'application/json', 'x-app-password': pw },
+    body: body && JSON.stringify(body),
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || 'Request failed');
+  return j;
+}
+
+// ---- email copy ----
+const read = () => ({
+  ...copy, subject: $('subject').value, preheader: $('pre').value, headline: $('headline').value, cta: $('cta').value,
+  paragraphs: $('body').value.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean),
+});
+const fill = c => {
+  copy = c; $('subject').value = c.subject; $('pre').value = c.preheader; $('headline').value = c.headline;
+  $('body').value = c.paragraphs.join('\n\n'); $('cta').value = c.cta;
+};
+async function preview() {
+  try { $('frame').srcdoc = (await api('render', { copy: read() })).html; } catch (e) { msg(e.message, true); }
+}
+['subject', 'pre', 'headline', 'body', 'cta'].forEach(id =>
+  $(id).addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(preview, 500); }));
+
+$('gen').onclick = async () => {
+  $('gen').disabled = true; msg('Writing your email...');
+  try {
+    const r = await api('generate', { link: $('link').value.trim(), prompt: $('notes').value, tone: $('tone').value });
+    fill(r.copy); $('frame').srcdoc = r.html; $('editor').hidden = false;
+    msg('Draft ready. Edit anything, send yourself a test, then start sending.');
+  } catch (e) { msg(e.message, true); }
+  $('gen').disabled = false;
+};
+
+// ---- subscribers: find and remove duplicates before anything is stored ----
+function parseEmails(text) {
+  const found = text.match(/[^\s,;"'<>()[\]]+@[^\s,;"'<>()[\]]+/g) || [], rows = new Map();
+  let invalid = 0, dupes = 0;
+  for (const raw of found) {
+    const email = raw.toLowerCase().replace(/^[.:]+|[.:]+$/g, '');
+    if (!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)) { invalid++; continue; }
+    let [local, domain] = email.split('@');
+    // Gmail ignores dots and +tags, so john.doe+x@gmail.com is the same person as johndoe@gmail.com
+    if (domain === 'gmail.com' || domain === 'googlemail.com') { local = local.split('+')[0].replaceAll('.', ''); domain = 'gmail.com'; }
+    const key = `${local}@${domain}`;
+    rows.has(key) ? dupes++ : rows.set(key, email);
+  }
+  return { rows: [...rows], found: found.length, invalid, dupes };
+}
+
+$('add').onclick = async () => {
+  const f = $('file').files[0], text = (f ? await f.text() + '\n' : '') + $('paste').value;
+  if (!text.trim()) return msg('Choose a file or paste some emails first', true);
+  $('add').disabled = true; msg('Cleaning and adding...');
+  try {
+    const { rows, found, invalid, dupes } = parseEmails(text);
+    let added = 0;
+    for (let i = 0; i < rows.length; i += 2000) added += (await api('contacts', { rows: rows.slice(i, i + 2000) })).added;
+    $('report').textContent = `Found ${n(found)} addresses. Removed ${n(dupes)} duplicates and ${n(invalid)} invalid. ${n(rows.length - added)} were already on your list. Added ${n(added)} new.`;
+    $('paste').value = ''; $('file').value = ''; msg(''); refresh();
+  } catch (e) { msg(e.message, true); }
+  $('add').disabled = false;
+};
+
+// ---- sending ----
+async function refresh() {
+  try {
+    const s = await api('status'), total = s.pending + s.queued + s.sent, hh = String(s.sendHour).padStart(2, '0');
+    $('bar').value = total ? s.sent / total : 0;
+    let line = !total ? 'No subscribers yet.' : `${n(s.sent)} of ${n(total)} sent. ${n(s.pending)} waiting. Today: ${n(s.sentToday)} of ${n(s.limit)}.`;
+    if (s.queued) line += ` ${n(s.queued)} in the current batch.`;
+    if (total) line += s.active ? (s.importing ? ' Preparing today\'s batch.' : s.sentToday >= s.limit ? ` Today's batch is done. Next one at ${hh}:00 UTC.` : ` Running. Daily batch goes at ${hh}:00 UTC.`) : (!s.pending && s.sent ? ' List complete.' : ' Paused.');
+    $('stat').textContent = line;
+    $('go').textContent = s.active ? 'Sending' : (s.sent && s.pending ? 'Resume sending' : 'Start sending');
+    if (s.error) msg(s.error, true);
+  } catch {}
+}
+
+$('test').onclick = async () => {
+  if (!$('testTo').value) return msg('Enter an email address for the test', true);
+  msg('Sending test...');
+  try { await api('test', { copy: read(), to: $('testTo').value }); msg('Test sent. Check your inbox and spam folder.'); }
+  catch (e) { msg(e.message, true); }
+};
+$('go').onclick = async () => {
+  try {
+    const r = await api('start', { copy: read() });
+    msg(r.resumed ? 'Resumed. Sending continues with the saved email.' : 'Started. Today\'s batch is going out now, then one batch every morning until everyone has it.');
+    refresh();
+  } catch (e) { msg(e.message, true); }
+};
+$('pause').onclick = async () => { try { await api('pause', {}); msg('Paused. Nothing more will go out until you resume.'); refresh(); } catch (e) { msg(e.message, true); } };
+$('redo').onclick = async () => {
+  if (!confirm('Start over? Everyone goes back to waiting, so people who already got the email will get it again.')) return;
+  try { await api('reset', {}); msg('Reset. Write or edit your email and press Start sending.'); refresh(); } catch (e) { msg(e.message, true); }
+};
+$('clear').onclick = async () => {
+  if (!confirm('Remove every subscriber from this app and stop sending? Your Brevo contacts are not touched.')) return;
+  try { await api('reset', { clear: true }); msg('Subscriber list cleared.'); refresh(); } catch (e) { msg(e.message, true); }
+};
+
+(async () => {
+  pw = pw || prompt('App password') || '';
+  try { await api('status'); sessionStorage.setItem('pw', pw); refresh(); setInterval(refresh, 20000); }
+  catch (e) { sessionStorage.removeItem('pw'); msg(`${e.message}. Reload to try again.`, true); }
+})();
+</script>
+</body>
+</html>

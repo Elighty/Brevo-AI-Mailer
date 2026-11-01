@@ -1,0 +1,16 @@
+{
+  "name": "brevo-mailer",
+  "main": "worker.js",
+  "compatibility_date": "2025-09-01",
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "brevo-mailer", "database_id": "PASTE-YOUR-D1-DATABASE-ID-HERE" }
+  ],
+  // Checks every 5 minutes whether a batch is due. Pausing and the 300/day cap are handled in worker.js.
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "vars": {
+    "DAILY_LIMIT": "300",
+    "SEND_HOUR_UTC": "8",
+    "CLAUDE_MODEL": "claude-sonnet-5-5"
+  }
+}
