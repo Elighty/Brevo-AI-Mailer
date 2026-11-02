@@ -10,7 +10,6 @@
   "triggers": { "crons": ["*/5 * * * *"] },
   "vars": {
     "DAILY_LIMIT": "300",
-    "SEND_HOUR_UTC": "8",
-    "CLAUDE_MODEL": "claude-sonnet-5-5"
+    "SEND_HOUR_UTC": "8"
   }
 }

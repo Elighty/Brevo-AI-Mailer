@@ -1,17 +1,20 @@
-// Brevo AI Mailer for Cloudflare Workers.
-// AI-written emails, de-duplicated subscribers (D1), 300 emails/day through Brevo campaigns, nobody emailed twice.
+// Dispatch on Cloudflare Workers: you write the email, subscribers are de-duplicated (D1),
+// and Brevo sends 300 a day until the whole list has it. Nobody is emailed twice.
 const enc = new TextEncoder();
 const isUrl = u => /^https?:\/\//i.test(u || '');
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const dailyLimit = env => Number(env.DAILY_LIMIT) || 300;
-const sendHour = env => Number(env.SEND_HOUR_UTC ?? 8);
 const sql = (env, q, ...a) => env.DB.prepare(q).bind(...a);
+const today = () => new Date().toISOString().slice(0, 10);
+const FOOT = '<p style="font:12px Arial,sans-serif;color:#777;text-align:center"><a href="{{ unsubscribe }}" style="color:#777">Unsubscribe</a></p>';
+// Brevo only sends marketing mail that has an unsubscribe link, so add one if the design has none.
+const withUnsub = h => /\{\{\s*unsubscribe\s*\}\}/.test(h) ? h : /<\/body>/i.test(h) ? h.replace(/<\/body>/i, () => FOOT + '</body>') : h + FOOT;
 
 let ready;
 const init = env => ready ??= env.DB.batch([
   sql(env, `CREATE TABLE IF NOT EXISTS contacts (norm TEXT PRIMARY KEY, email TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending')`),
-  sql(env, `CREATE TABLE IF NOT EXISTS job (id INTEGER PRIMARY KEY, active INTEGER DEFAULT 0, copy TEXT DEFAULT '', day TEXT DEFAULT '', sent_today INTEGER DEFAULT 0, batch TEXT DEFAULT '', lock INTEGER DEFAULT 0, next_try INTEGER DEFAULT 0, last_error TEXT DEFAULT '')`),
-  sql(env, 'INSERT OR IGNORE INTO job (id) VALUES (1)'),
+  sql(env, `CREATE TABLE IF NOT EXISTS campaign (id INTEGER PRIMARY KEY, subject TEXT DEFAULT '', html TEXT DEFAULT '', active INTEGER DEFAULT 0, start_day TEXT DEFAULT '', send_hour INTEGER DEFAULT 8, day TEXT DEFAULT '', sent_today INTEGER DEFAULT 0, batch TEXT DEFAULT '', lock INTEGER DEFAULT 0, next_try INTEGER DEFAULT 0, last_error TEXT DEFAULT '')`),
+  sql(env, `CREATE TABLE IF NOT EXISTS days (day TEXT PRIMARY KEY, sent INTEGER DEFAULT 0)`),
+  sql(env, 'INSERT OR IGNORE INTO campaign (id, send_hour) VALUES (1, ?)', Number(env.SEND_HOUR_UTC ?? 8)),
 ]).catch(e => { ready = undefined; throw e; });
 
 async function brevo(env, method, url, body) {
@@ -25,110 +28,82 @@ async function brevo(env, method, url, body) {
   return d;
 }
 
-async function spotifyInfo(link) {
-  if (!link.includes('open.spotify.com')) return {};
-  try {
-    const j = await (await fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent(link))).json();
-    return { title: j.title, cover: j.thumbnail_url };
-  } catch { return {}; }
-}
-
-const SYSTEM = `You are a senior email copywriter for independent musicians. Write a short email that makes the reader want to press play right now.
-- subject: max 50 characters, specific and curiosity-driven. Never misleading, no ALL CAPS, no spammy words.
-- preheader: max 90 characters, adds a new angle instead of repeating the subject.
-- headline: max 8 words.
-- paragraphs: 2-3 short paragraphs in the artist's warm first-person voice. Open with a feeling, a moment or a question, not "I'm excited to announce". Concrete detail beats hype. One idea per paragraph.
-- cta: max 4 words, an action like "Listen now".
-Never invent facts (stream counts, awards, collaborators) that are not in the brief.
-Reply with ONLY a JSON object: {"subject":"","preheader":"","headline":"","paragraphs":[""],"cta":""}`;
-
-// The AI writes the words; this fixed email-safe layout does the HTML. Brevo fills in the unsubscribe link.
-function render({ subject, preheader, headline, paragraphs = [], cta, link, cover }, env, unsub = '{{ unsubscribe }}') {
-  const url = isUrl(link) ? esc(link) : '#';
-  const img = isUrl(cover)
-    ? `<tr><td><a href="${url}"><img src="${esc(cover)}" width="600" alt="${esc(headline)}" style="display:block;width:100%;height:auto;border:0"></a></td></tr>` : '';
-  const body = paragraphs.map(t => `<p style="margin:0 0 16px">${esc(t)}</p>`).join('');
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(subject)}</title></head>
-<body style="margin:0;padding:0;background:#eceaf6">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(preheader)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 12px">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden">
-${img}
-<tr><td style="padding:32px 32px 8px;font:800 32px/1.1 'Helvetica Neue',Arial,sans-serif;letter-spacing:-.5px;color:#1d1a33">${esc(headline)}</td></tr>
-<tr><td style="padding:8px 32px;font:17px/1.6 Georgia,serif;color:#2b2842">${body}</td></tr>
-<tr><td align="center" style="padding:8px 32px 40px"><a href="${url}" style="display:inline-block;background:#3a2bff;color:#ffffff;font:bold 17px Arial,sans-serif;text-decoration:none;padding:16px 40px;border-radius:6px">${esc(cta)}</a></td></tr>
-</table>
-<p style="max-width:520px;margin:20px 0 0;font:12px/1.5 Arial,sans-serif;color:#625f80">You are getting this because you subscribed to updates from ${esc(env.SENDER_NAME)}.${env.MAIL_ADDRESS ? ' ' + esc(env.MAIL_ADDRESS) : ''}<br><a href="${unsub}" style="color:#625f80">Unsubscribe</a></p>
-</td></tr></table></body></html>`;
-}
+// Email clients cannot play embeds, so a link becomes a clickable cover, a title and a button.
+const OEMBED = [
+  [/open\.spotify\.com/, 'https://open.spotify.com/oembed?url=', 'Listen on Spotify'],
+  [/youtu\.?be/, 'https://www.youtube.com/oembed?format=json&url=', 'Watch on YouTube'],
+  [/soundcloud\.com/, 'https://soundcloud.com/oembed?format=json&url=', 'Listen on SoundCloud'],
+  [/vimeo\.com/, 'https://vimeo.com/api/oembed.json?url=', 'Watch on Vimeo'],
+];
 
 async function status(env) {
-  const today = new Date().toISOString().slice(0, 10);
-  const j = await sql(env, 'SELECT * FROM job WHERE id=1').first();
+  const j = await sql(env, 'SELECT * FROM campaign WHERE id=1').first();
   const { results } = await sql(env, 'SELECT status, COUNT(*) AS n FROM contacts GROUP BY status').all();
+  const days = (await sql(env, 'SELECT day, sent FROM days ORDER BY day DESC LIMIT 30').all()).results;
   const n = Object.fromEntries(results.map(r => [r.status, r.n]));
   return {
     pending: n.pending || 0, queued: n.queued || 0, sent: n.sent || 0, active: !!j.active, importing: !!j.batch,
-    subject: j.copy ? JSON.parse(j.copy).subject : '', sentToday: j.day === today ? j.sent_today : 0,
-    limit: dailyLimit(env), sendHour: sendHour(env), error: j.last_error,
+    sentToday: j.day === today() ? j.sent_today : 0, limit: dailyLimit(env), sendHour: j.send_hour, startDay: j.start_day,
+    error: j.last_error, today: today(), days,
+    footer: `You are getting this because you subscribed to updates from ${env.SENDER_NAME || 'us'}.${env.MAIL_ADDRESS ? ' ' + env.MAIL_ADDRESS : ''}`,
   };
 }
 
 // One step of the sender. Runs every 5 minutes (cron) and when you press Start.
-// Step 1: pick today's contacts, mark them 'queued', hand them to Brevo. Step 2: once Brevo has them, send the campaign.
-async function tick(env, force = false) {
+// Step 1 (at the chosen hour): take the next people in line, mark them 'queued', hand them to Brevo.
+// Step 2 (once Brevo has them): send the campaign and mark them 'sent'. The daily limit makes it wait until tomorrow.
+async function tick(env) {
   const now = Date.now();
-  const got = await sql(env, 'UPDATE job SET lock=? WHERE id=1 AND lock<?', now + 120000, now).run();
+  const got = await sql(env, 'UPDATE campaign SET lock=? WHERE id=1 AND lock<?', now + 120000, now).run();
   if (!got.meta.changes) return; // another run is already working
   let sending = false;
   try {
-    const j = await sql(env, 'SELECT * FROM job WHERE id=1').first();
-    if (!j.active || !j.copy || (now < j.next_try && !force)) return;
-    const copy = JSON.parse(j.copy), today = new Date().toISOString().slice(0, 10);
-    const sentToday = j.day === today ? j.sent_today : 0;
+    const j = await sql(env, 'SELECT * FROM campaign WHERE id=1').first(), day = today();
+    if (!j.active || !j.html || now < j.next_try) return;
+    const sentToday = j.day === day ? j.sent_today : 0;
 
     if (j.batch) {
       const b = JSON.parse(j.batch);
       if ((await brevo(env, 'GET', `/processes/${b.processId}`)).status !== 'completed') return;
       const c = await brevo(env, 'POST', '/emailCampaigns', {
-        name: `${copy.subject} (${today})`, subject: copy.subject,
-        sender: { name: env.SENDER_NAME, email: env.SENDER_EMAIL },
-        htmlContent: render(copy, env), recipients: { listIds: [b.listId] },
+        name: `${j.subject} (${day})`, subject: j.subject, sender: { name: env.SENDER_NAME, email: env.SENDER_EMAIL },
+        htmlContent: withUnsub(j.html), recipients: { listIds: [b.listId] },
       });
       sending = true;
       await brevo(env, 'POST', `/emailCampaigns/${c.id}/sendNow`);
       await env.DB.batch([
         sql(env, `UPDATE contacts SET status='sent' WHERE status='queued'`),
-        sql(env, `UPDATE job SET batch='', day=?, sent_today=?, last_error='' WHERE id=1`, today, sentToday + b.n),
+        sql(env, `UPDATE campaign SET batch='', day=?, sent_today=?, last_error='' WHERE id=1`, day, sentToday + b.n),
+        sql(env, 'INSERT INTO days (day, sent) VALUES (?, ?) ON CONFLICT(day) DO UPDATE SET sent = sent + excluded.sent', day, b.n),
       ]);
       const left = await sql(env, `SELECT COUNT(*) AS n FROM contacts WHERE status='pending'`).first('n');
-      if (!left) await sql(env, 'UPDATE job SET active=0 WHERE id=1').run(); // whole list done
+      if (!left) await sql(env, 'UPDATE campaign SET active=0 WHERE id=1').run(); // whole list done
       return;
     }
 
     const room = dailyLimit(env) - sentToday;
-    if (room <= 0 || (!force && new Date().getUTCHours() < sendHour(env))) return; // today's quota used, or too early
+    if (room <= 0 || (j.start_day && day < j.start_day) || new Date().getUTCHours() < j.send_hour) return;
     const { results } = await sql(env,
       `UPDATE contacts SET status='queued' WHERE norm IN (SELECT norm FROM contacts WHERE status='pending' ORDER BY rowid LIMIT ?) RETURNING email`, room).all();
-    if (!results.length) { await sql(env, 'UPDATE job SET active=0 WHERE id=1').run(); return; }
+    if (!results.length) { await sql(env, 'UPDATE campaign SET active=0 WHERE id=1').run(); return; }
     try {
       const { folders } = await brevo(env, 'GET', '/contacts/folders?limit=1&offset=0');
       const list = await brevo(env, 'POST', '/contacts/lists', { name: `Batch ${new Date().toISOString().slice(0, 16)}`, folderId: folders[0].id });
       const imp = await brevo(env, 'POST', '/contacts/import', { jsonBody: results.map(r => ({ email: r.email })), listIds: [list.id], updateExistingContacts: true });
-      await sql(env, `UPDATE job SET batch=?, day=?, sent_today=?, last_error='' WHERE id=1`,
-        JSON.stringify({ listId: list.id, processId: imp.processId, n: results.length }), today, sentToday).run();
+      await sql(env, `UPDATE campaign SET batch=?, day=?, sent_today=?, last_error='' WHERE id=1`,
+        JSON.stringify({ listId: list.id, processId: imp.processId, n: results.length }), day, sentToday).run();
     } catch (e) { await sql(env, `UPDATE contacts SET status='pending' WHERE status='queued'`).run(); throw e; }
   } catch (e) {
     if (!sending || e.status) { // nothing went out: put people back in line and retry in an hour
       await env.DB.batch([
         sql(env, `UPDATE contacts SET status='pending' WHERE status='queued'`),
-        sql(env, `UPDATE job SET batch='', last_error=?, next_try=? WHERE id=1`, e.message, now + 3600000),
+        sql(env, `UPDATE campaign SET batch='', last_error=?, next_try=? WHERE id=1`, e.message, now + 3600000),
       ]);
     } else { // unsure whether Brevo sent it: pause and keep these people marked so they are never emailed twice
-      await sql(env, `UPDATE job SET batch='', active=0, last_error=? WHERE id=1`,
+      await sql(env, `UPDATE campaign SET batch='', active=0, last_error=? WHERE id=1`,
         `${e.message}. Check Brevo to see if the last campaign went out.`).run();
     }
-  } finally { await sql(env, 'UPDATE job SET lock=0 WHERE id=1').run(); }
+  } finally { await sql(env, 'UPDATE campaign SET lock=0 WHERE id=1').run(); }
 }
 
 const routes = {
@@ -142,60 +117,48 @@ const routes = {
     return { added: r.meta.changes };
   },
 
-  'POST /api/generate': async (env, ctx, { prompt = '', link = '', tone = 'warm and personal' }) => {
-    if (!isUrl(link)) throw new Error('Add a link that starts with https://');
-    const sp = await spotifyInfo(link);
-    const brief = `Artist: ${env.SENDER_NAME}\nLink: ${link}\n${sp.title ? `Spotify title: ${sp.title}\n` : ''}Tone: ${tone}\nNotes from the artist: ${prompt || '(none)'}`;
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model: env.CLAUDE_MODEL || 'claude-sonnet-5-5', max_tokens: 1000, system: SYSTEM, messages: [{ role: 'user', content: brief }] }),
-    });
-    const j = await r.json();
-    if (!r.ok) throw new Error(`Claude: ${j.error?.message || r.status}`);
-    const txt = j.content.map(c => c.text || '').join('');
-    let copy;
-    try { copy = JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1)); }
-    catch { throw new Error('The AI reply was malformed. Click the button again.'); }
-    copy.paragraphs = [].concat(copy.paragraphs || []);
-    copy.link = link; copy.cover = sp.cover || '';
-    return { copy, html: render(copy, env) };
+  'POST /api/embed': async (env, ctx, { url }) => {
+    if (!isUrl(url)) throw new Error('That does not look like a web link');
+    const p = OEMBED.find(([re]) => re.test(url));
+    let title = '', image = '';
+    if (p) try { const j = await (await fetch(p[1] + encodeURIComponent(url))).json(); title = j.title || ''; image = j.thumbnail_url || ''; } catch {}
+    return { title, image, cta: p ? p[2] : 'Open the link' };
   },
 
-  'POST /api/render': (env, ctx, { copy = {} }) => ({ html: render(copy, env) }),
-
-  'POST /api/test': async (env, ctx, { copy, to }) => {
-    if (!copy?.subject || !to) throw new Error('Add a subject line and a test address');
+  'POST /api/test': async (env, ctx, { subject, html, to }) => {
+    if (!subject || !html || !to) throw new Error('Add a subject, some content and a test address');
     await brevo(env, 'POST', '/smtp/email', {
       sender: { name: env.SENDER_NAME, email: env.SENDER_EMAIL }, to: [{ email: to }],
-      subject: `[Test] ${copy.subject}`, htmlContent: render(copy, env, '#'),
+      subject: `[Test] ${subject}`, htmlContent: withUnsub(html).replace(/\{\{\s*unsubscribe\s*\}\}/g, '#'),
     });
     return { ok: true };
   },
 
-  'POST /api/start': async (env, ctx, { copy }) => {
+  'POST /api/start': async (env, ctx, { subject, html, startDay = '', sendHour }) => {
     const s = await status(env);
     if (s.importing) throw new Error('A batch is being prepared. Try again in a few minutes.');
     if (!s.pending && !s.queued && !s.sent) throw new Error('Add your subscribers first');
+    const hour = Number.isInteger(sendHour) && sendHour >= 0 && sendHour <= 23 ? sendHour : s.sendHour;
+    const dayOk = /^\d{4}-\d{2}-\d{2}$/.test(startDay) ? startDay : '';
     const fresh = !s.sent || !s.pending; // nothing sent yet, or the last round is complete
     if (fresh) {
-      if (!copy?.subject) throw new Error('Write the email first');
+      if (!subject || !html) throw new Error('Write the email first. It needs a subject and some content.');
       await env.DB.batch([
         sql(env, `UPDATE contacts SET status='pending'`),
-        sql(env, `UPDATE job SET copy=?, active=1, next_try=0, last_error='' WHERE id=1`, JSON.stringify(copy)),
+        sql(env, `UPDATE campaign SET subject=?, html=?, active=1, start_day=?, send_hour=?, next_try=0, last_error='' WHERE id=1`, subject, html, dayOk, hour),
       ]);
-    } else await sql(env, `UPDATE job SET active=1, next_try=0, last_error='' WHERE id=1`).run();
-    ctx.waitUntil(tick(env, true));
+    } else await sql(env, `UPDATE campaign SET active=1, start_day=?, send_hour=?, next_try=0, last_error='' WHERE id=1`, dayOk, hour).run();
+    ctx.waitUntil(tick(env));
     return { ok: true, resumed: !fresh };
   },
 
-  'POST /api/pause': async env => { await sql(env, 'UPDATE job SET active=0 WHERE id=1').run(); return { ok: true }; },
+  'POST /api/pause': async env => { await sql(env, 'UPDATE campaign SET active=0 WHERE id=1').run(); return { ok: true }; },
 
   'POST /api/reset': async (env, ctx, { clear }) => {
     if ((await status(env)).importing) throw new Error('A batch is being prepared. Try again in a few minutes.');
     await env.DB.batch([
       sql(env, clear ? 'DELETE FROM contacts' : `UPDATE contacts SET status='pending'`),
-      sql(env, `UPDATE job SET active=0, copy='', last_error='' WHERE id=1`),
+      sql(env, `UPDATE campaign SET active=0, subject='', html='', last_error='' WHERE id=1`),
     ]);
     return { ok: true };
   },

@@ -1,7 +1,7 @@
 {
   "name": "brevo-ai-mailer",
-  "version": "2.0.0",
-  "private": true,
-  "scripts": { "dev": "wrangler dev", "deploy": "wrangler deploy" },
-  "devDependencies": { "wrangler": "^4.0.0" }
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": { "start": "node --env-file=.env server.js" },
+  "dependencies": { "express": "^4.21.2" }
 }
