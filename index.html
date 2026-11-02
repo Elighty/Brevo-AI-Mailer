@@ -3,147 +3,95 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dispatch</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Young+Serif&display=swap" rel="stylesheet">
+<title>Campaign writer</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#14213d;--paper:#f4f5f8;--line:#d3d8e2;--mute:#586177;--blue:#1b4f9c;--red:#c81e36;--stamp:#f2c14e}
+:root{--ink:#1d1a33;--paper:#eceaf6;--mute:#625f80;--line:#c6c2e0;--blue:#3a2bff;--sun:#ffd23f}
 *{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 'IBM Plex Sans',system-ui,sans-serif}
-header{display:flex;align-items:center;gap:28px;padding:12px 28px;background:#fff}
-.brand{font:26px 'Young Serif',Georgia,serif}
-nav{display:flex;gap:4px}
-nav button{background:none;border:0;border-radius:0;padding:8px 12px;color:var(--mute)}
-nav button[aria-current]{color:var(--ink);box-shadow:inset 0 -3px var(--red)}
-.stripe{height:8px;background:repeating-linear-gradient(135deg,var(--red) 0 14px,#fff 14px 24px,var(--blue) 24px 38px,#fff 38px 48px)}
-#msg{margin:0;padding:10px 28px;background:var(--ink);color:#fff;font-size:14px}
-#msg:empty{display:none}
-#msg.err{background:var(--red)}
-.view{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,400px);gap:32px;max-width:1180px;margin:0 auto;padding:28px}
-h2{font:400 22px 'Young Serif',Georgia,serif;margin:0 0 10px}
-label{display:block;font-weight:600;font-size:14px;margin-top:14px}
-button{font:inherit;font-weight:600;cursor:pointer;border:1px solid transparent;border-radius:6px;padding:10px 16px;background:var(--ink);color:#fff}
-button.primary{background:var(--blue)}
-button.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
-button.warn{background:transparent;color:var(--red);border-color:var(--line)}
-button:disabled{opacity:.5;cursor:default}
-:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
-input,select,textarea{font:inherit;color:inherit;border:1px solid var(--line);border-radius:6px;padding:10px 12px;background:#fff;width:100%}
-.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
-.row input{flex:1;min-width:160px}
-.note{color:var(--mute);font-size:14px;margin:8px 0}
-.title{font:400 28px 'Young Serif',Georgia,serif;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:8px 0;background:transparent}
-.pre{border:0;border-radius:0;padding:8px 0;background:transparent;color:var(--mute)}
-.bar{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;gap:2px;padding:6px;margin-top:12px;background:#fff;border:1px solid var(--line);border-bottom:0;border-radius:6px 6px 0 0}
-.bar button{background:transparent;color:var(--ink);padding:6px 10px;font-size:14px;border-radius:4px}
-.bar button:hover{background:#e9edf5}
-.bar i{width:1px;background:var(--line);margin:4px 6px}
-#ed,#html{min-height:460px;background:#fff;border:1px solid var(--line);border-radius:0 0 6px 6px;padding:28px 32px;font:17px/1.65 Georgia,serif;outline:0}
-#ed:focus{box-shadow:0 0 0 3px #1b4f9c33}
-#ed:empty::before{content:attr(data-empty);color:var(--mute)}
-#ed img{max-width:100%;height:auto}
-#ed a{color:var(--blue)}
-#ed a[data-btn]{display:inline-block;background:var(--blue);color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font:600 15px 'IBM Plex Sans',sans-serif}
-#ed blockquote{border-left:3px solid var(--stamp);margin:0 0 16px;padding-left:16px}
-#html{font:13px/1.5 'IBM Plex Mono',monospace;resize:vertical;border-radius:6px}
-.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-bottom:18px}
-.sw{padding:8px;background:#fff;color:var(--ink);border-color:var(--line);font-size:12px;text-align:left}
-.sw b{display:block;position:relative;height:34px;margin-bottom:6px;border-radius:3px}
-.sw b::after{content:'';position:absolute;inset:7px 12px;border-radius:2px;background:var(--c);border-top:5px solid var(--a)}
-.sw[aria-pressed=true]{outline:3px solid var(--stamp);border-color:var(--ink)}
-iframe{width:100%;height:600px;border:1px solid var(--line);border-radius:6px;background:#fff}
-.big{font:400 30px 'Young Serif',Georgia,serif;margin:0}
-.num,.plan b{font-family:'IBM Plex Mono',monospace;font-weight:500}
-progress{width:100%;height:10px;margin:14px 0;accent-color:var(--blue)}
-.plan{list-style:none;margin:0;padding:0;max-height:64vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:6px}
-.plan li{display:grid;grid-template-columns:1fr auto 96px;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:15px}
-.plan em{font-style:normal;text-align:right;color:var(--mute)}
-.plan .done{color:var(--mute)}
-.plan .hot em{color:var(--red);font-weight:600}
-.link{background:none;border:0;padding:0;color:var(--blue);text-decoration:underline}
-dialog{border:1px solid var(--line);border-radius:8px;width:min(640px,calc(100% - 32px));padding:22px}
-dialog::backdrop{background:#14213d99}
-dialog textarea{min-height:200px;font:13px/1.5 'IBM Plex Mono',monospace}
+body{margin:0;color:var(--ink);background:var(--paper);font:16px/1.5 system-ui,sans-serif}
+main{display:grid;grid-template-columns:minmax(340px,480px) 1fr;min-height:100vh}
+aside{padding:40px 36px}
+h1{font:800 clamp(34px,4vw,46px)/1 'Bricolage Grotesque','Arial Black',sans-serif;letter-spacing:-.02em;margin:0 0 10px}
+.sub{color:var(--mute);margin:0 0 28px;max-width:34ch}
+section{border-top:1px solid var(--line);padding:22px 0}
+h2{font:700 19px/1.2 'Bricolage Grotesque',system-ui,sans-serif;margin:0 0 4px}
+label{display:block;font-size:14px;font-weight:600;margin:14px 0 4px}
+input,textarea,select{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:6px;background:#fff;color:inherit;font:inherit}
+input:focus,textarea:focus,select:focus,button:focus-visible{outline:3px solid var(--blue);outline-offset:1px}
+textarea{min-height:90px;resize:vertical}
+button{padding:12px 20px;border:0;border-radius:6px;background:var(--ink);color:#fff;font:700 15px system-ui,sans-serif;cursor:pointer}
+button.write{background:var(--sun);color:var(--ink)}
+button.send{background:var(--blue)}
+button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+button:disabled{opacity:.5;cursor:wait}
+.row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.row input{flex:1;min-width:180px}
+progress{width:100%;height:10px;margin-top:18px;accent-color:var(--blue)}
+.note{font-size:14px;color:var(--mute);margin:8px 0 0}
+#msg{min-height:24px;margin:0 0 8px;font-size:14px;color:var(--mute)}
+#msg.err{color:#c4161c;font-weight:600}
+.stage{background:var(--blue);display:grid;place-items:center;padding:32px}
+iframe{width:min(100%,440px);height:min(88vh,820px);border:0;border-radius:18px;background:#fff;box-shadow:0 20px 60px #0004}
 [hidden]{display:none!important}
-@media(max-width:900px){.view{grid-template-columns:1fr;padding:18px}header{padding:12px 16px;gap:12px;flex-wrap:wrap}#msg{padding:10px 16px}}
+@media(max-width:860px){main{grid-template-columns:1fr}aside{padding:28px 20px}.stage{padding:20px}}
 </style>
 </head>
 <body>
-<header>
-  <div class="brand">Dispatch</div>
-  <nav><button data-v="compose" aria-current>Compose</button><button data-v="audience">Audience</button><button data-v="schedule">Schedule</button></nav>
-</header>
-<div class="stripe"></div>
-<p id="msg" role="status"></p>
+<main>
+<aside>
+  <h1>Turn a link into a click.</h1>
+  <p class="sub">Paste your music link and Claude writes the email. Upload your list and it goes out 300 a day.</p>
 
-<main id="compose" class="view">
-  <div style="min-width:0">
-    <input id="subject" class="title" placeholder="Subject line" aria-label="Subject line">
-    <input id="pre" class="pre" placeholder="Preview text, the grey line next to the subject in an inbox" aria-label="Preview text">
-    <div id="bar" class="bar"></div>
-    <div id="ed" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" aria-label="Email body" data-empty="Write your email here. You can paste straight from WordPress, Wix, Google Docs or Word."></div>
-    <textarea id="html" hidden spellcheck="false" aria-label="Email HTML"></textarea>
-    <label for="footer">Footer note (who you are and your postal address)</label>
-    <input id="footer">
-  </div>
-  <div>
-    <h2>Theme</h2>
-    <div id="themes" class="themes"></div>
-    <p id="customNote" class="note" hidden>You are using an imported design. <button id="backTheme" class="link">Switch back to a theme</button></p>
-    <h2>Preview</h2>
-    <iframe id="frame" sandbox title="Email preview"></iframe>
-  </div>
-</main>
+  <section>
+    <h2>1. Brief</h2>
+    <label for="link">Link to your music</label>
+    <input id="link" placeholder="https://open.spotify.com/album/...">
+    <label for="notes">What should people know? (optional)</label>
+    <textarea id="notes" placeholder="New EP out Friday. Written after I moved to Lagos. Afrobeats meets soul."></textarea>
+    <label for="tone">Tone</label>
+    <select id="tone"><option>warm and personal</option><option>hype and energetic</option><option>mysterious and cinematic</option><option>short and punchy</option></select>
+    <div class="row"><button id="gen" class="write">Write my email</button></div>
+  </section>
 
-<main id="audience" class="view" hidden>
-  <div>
-    <h2>Add subscribers</h2>
-    <p class="note">Upload a CSV or text file, or paste addresses. Duplicates and invalid addresses are removed before anything is saved, and nobody already on your list is added twice.</p>
-    <label for="file">File</label><input id="file" type="file" accept=".csv,.txt">
-    <label for="paste">Or paste emails</label><textarea id="paste" rows="8"></textarea>
-    <div class="row"><button id="add" class="primary">Clean and add</button></div>
+  <p id="msg"></p>
+
+  <div id="editor" hidden>
+    <section>
+      <h2>2. Edit</h2>
+      <label for="subject">Subject line</label><input id="subject">
+      <label for="pre">Preview text</label><input id="pre">
+      <label for="headline">Headline</label><input id="headline">
+      <label for="body">Body (blank line starts a new paragraph)</label><textarea id="body" style="min-height:190px"></textarea>
+      <label for="cta">Button text</label><input id="cta">
+    </section>
+  </div>
+
+  <section>
+    <h2>3. Subscribers</h2>
+    <label for="file">Upload a CSV or text file</label><input id="file" type="file" accept=".csv,.txt">
+    <label for="paste">Or paste emails</label><textarea id="paste"></textarea>
+    <div class="row"><button id="add">Clean and add</button></div>
     <p id="report" class="note"></p>
-  </div>
-  <div>
-    <h2>Your list</h2>
-    <p id="counts" class="big" style="font-size:22px"></p>
-    <div class="row"><button id="clear" class="warn">Remove all subscribers</button></div>
-    <p class="note">This only clears the list inside Dispatch. Your Brevo contacts are not touched.</p>
-  </div>
-</main>
+  </section>
 
-<main id="schedule" class="view" hidden>
-  <div>
-    <h2>Send plan</h2>
-    <p id="sum" class="big"></p>
-    <p id="sub" class="note"></p>
-    <progress id="prog" max="1" value="0"></progress>
-    <p id="state" class="num"></p>
-    <label for="startDay">Start on</label><input id="startDay" type="date">
-    <label for="hour">Send each day at</label><select id="hour"></select>
-    <p class="note">Brevo's free plan allows 300 emails a day. Each day at this time the next 300 people get your email. When the daily limit is reached it waits, then carries on the next day until everyone on the list has it.</p>
-    <div class="row"><input id="testTo" type="email" placeholder="Send a test to..." aria-label="Test email address"><button id="test" class="ghost">Send test</button></div>
-    <div class="row"><button id="go" class="primary">Start sending</button><button id="pause" class="ghost">Pause</button><button id="redo" class="warn">Start over</button></div>
-  </div>
-  <div>
-    <h2>Schedule</h2>
-    <ol id="plan" class="plan"></ol>
-  </div>
+  <section>
+    <h2>4. Send</h2>
+    <div class="row"><input id="testTo" type="email" placeholder="you@example.com" aria-label="Test email address"><button id="test">Send test</button></div>
+    <div class="row"><button id="go" class="send">Start sending</button><button id="pause" class="ghost">Pause</button></div>
+    <progress id="bar" max="1" value="0"></progress>
+    <p id="stat" class="note"></p>
+    <div class="row"><button id="redo" class="ghost">Start over</button><button id="clear" class="ghost">Remove all subscribers</button></div>
+  </section>
+</aside>
+<div class="stage">
+  <iframe id="frame" sandbox title="Email preview" srcdoc="<body style='margin:0;display:grid;place-items:center;height:100vh;font:16px system-ui;color:#625f80'>Your email appears here</body>"></iframe>
+</div>
 </main>
-
-<dialog id="imp">
-  <h2>Import a design</h2>
-  <p class="note">Paste the HTML of an email template from WordPress, Wix, Mailchimp or anywhere else, or choose an .html file. Unsubscribe and first-name tags from other platforms are converted for Brevo.</p>
-  <textarea id="impHtml" spellcheck="false" placeholder="Paste HTML here"></textarea>
-  <label for="impFile">Or choose a file</label><input id="impFile" type="file" accept=".html,.htm,.txt">
-  <div class="row"><button id="impAs" class="primary">Use this design as it is</button><button id="impEd">Bring the text into the editor</button><button id="impX" class="ghost">Cancel</button></div>
-</dialog>
 
 <script>
 const $ = id => document.getElementById(id);
-const num = x => Number(x).toLocaleString();
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const ed = $('ed');
-let pw = sessionStorage.getItem('pw') || '', theme = 'newsletter', custom = null, timer, first = true, S;
+const n = x => Number(x).toLocaleString();
+let pw = sessionStorage.getItem('pw') || '', copy = {}, timer;
 const msg = (t, err) => { $('msg').textContent = t; $('msg').className = err ? 'err' : ''; };
 
 async function api(path, body) {
@@ -157,183 +105,32 @@ async function api(path, body) {
   return j;
 }
 
-// ---------- views ----------
-function show(v) {
-  document.querySelectorAll('.view').forEach(x => x.hidden = x.id !== v);
-  document.querySelectorAll('nav button').forEach(b => b.toggleAttribute('aria-current', b.dataset.v === v));
-}
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.v));
-
-// ---------- themes: every one is plain tables and inline styles, so Gmail and Outlook render them ----------
-const ARIAL = 'Arial,Helvetica,sans-serif', SERIF = 'Georgia,"Times New Roman",serif', MONO = '"Courier New",monospace';
-const T = (name, o) => ({ name, bg: '#f3f4f6', card: '#ffffff', ink: '#1f2430', mute: '#7b8190', link: '#1b4f9c', accent: '#1b4f9c', btn: '#ffffff',
-  rule: '#e4e6eb', head: ARIAL, body: ARIAL, hw: 700, r: 8, top: 0, line: 0, size: 16, h1: 30, h2: 22, pad: 36, ...o });
-const THEMES = {
-  newsletter: T('Newsletter', { top: 6 }),
-  letter: T('Letter', { bg: '#ececec', head: SERIF, body: SERIF, r: 2, size: 17 }),
-  plain: T('Plain', { bg: '#ffffff', r: 0, pad: 0 }),
-  midnight: T('Midnight', { bg: '#0d0f16', card: '#171a24', ink: '#e9ebf2', mute: '#8c92a6', link: '#ffcc4d', accent: '#ffcc4d', btn: '#171a24', rule: '#2a2f3e' }),
-  stage: T('Stage', { bg: '#08080b', card: '#14141b', ink: '#f4f4f7', mute: '#8a8a99', link: '#ff5a8a', accent: '#ff5a8a', btn: '#14141b', rule: '#2b2b38', hw: 800, h1: 36, r: 4 }),
-  poster: T('Poster', { bg: '#ffd23f', accent: '#111111', link: '#111111', top: 12, hw: 800, h1: 38, r: 0 }),
-  sage: T('Sage', { bg: '#e4ebe2', card: '#fbfdfa', accent: '#3f6b4f', link: '#3f6b4f', head: SERIF, r: 14 }),
-  ocean: T('Ocean', { bg: '#dcebf6', accent: '#0b6fa4', link: '#0b6fa4', top: 6 }),
-  berry: T('Berry', { bg: '#f1e4ee', accent: '#8e2a6b', link: '#8e2a6b', head: SERIF, r: 12 }),
-  sunset: T('Sunset', { bg: '#fde9df', accent: '#e4572e', link: '#c43e1c', top: 6 }),
-  gold: T('Gold', { bg: '#161616', card: '#202020', ink: '#f1ece1', mute: '#9a958a', link: '#d4a537', accent: '#d4a537', btn: '#202020', rule: '#3a3a3a', head: SERIF }),
-  mono: T('Mono', { bg: '#ffffff', ink: '#111111', accent: '#111111', link: '#111111', head: MONO, body: MONO, r: 0, line: 1, size: 15 }),
-};
-$('themes').innerHTML = Object.entries(THEMES).map(([k, t]) =>
-  `<button class="sw" data-k="${k}" aria-pressed="false"><b style="background:${t.bg};--c:${t.card};--a:${t.accent}"></b>${t.name}</button>`).join('');
-$('themes').onclick = ev => { const b = ev.target.closest('.sw'); if (b) { theme = b.dataset.k; custom = null; showCustom(); } };
-
-// ---------- cleaning pasted content (WordPress, Wix, Google Docs, Word) ----------
-function clean(html) {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  doc.querySelectorAll('script,style,iframe,object,embed,form,input,button,select,textarea,svg,video,audio,noscript,meta,link,title').forEach(x => x.remove());
-  const ATTR = { A: ['href', 'data-btn'], IMG: ['src', 'alt'], TD: ['colspan'], TH: ['colspan'] };
-  const retag = (x, name) => { const n = doc.createElement(name); n.innerHTML = x.innerHTML; x.replaceWith(n); return n; };
-  (function walk(el) {
-    for (let x of [...el.children]) {
-      walk(x);
-      const st = x.style;
-      let tag = x.tagName;
-      if (tag === 'SPAN' || tag === 'FONT') { // bold, italic and underline hide in styles
-        let h = x.innerHTML;
-        if (st.fontWeight === 'bold' || +st.fontWeight >= 600) h = `<strong>${h}</strong>`;
-        if (st.fontStyle === 'italic') h = `<em>${h}</em>`;
-        if (/underline/.test(st.textDecoration + st.textDecorationLine)) h = `<u>${h}</u>`;
-        x.insertAdjacentHTML('beforebegin', h); x.remove(); continue;
-      }
-      const to = { B: 'STRONG', I: 'EM', H5: 'H4', H6: 'H4' }[tag];
-      if (to) { x = retag(x, to); tag = to; }
-      if (tag === 'DIV') {
-        if (x.querySelector('p,h1,h2,h3,h4,ul,ol,table,blockquote,hr,div')) { x.replaceWith(...x.childNodes); continue; }
-        x = retag(x, 'P'); tag = 'P';
-      }
-      if (!/^(P|H[1-4]|A|STRONG|EM|U|UL|OL|LI|BR|HR|IMG|BLOCKQUOTE|TABLE|TBODY|THEAD|TR|TD|TH)$/.test(tag)) { x.replaceWith(...x.childNodes); continue; }
-      const ta = (st.textAlign || x.getAttribute('align') || '').toLowerCase().match(/^(left|center|right)$/)?.[0];
-      if (tag === 'IMG') { const real = x.getAttribute('data-src') || x.getAttribute('data-lazy-src'); if (real) x.setAttribute('src', real); }
-      for (const a of [...x.attributes]) if (!(ATTR[tag] || []).includes(a.name)) x.removeAttribute(a.name);
-      if (ta && /^(P|H[1-4]|LI|TD|TH)$/.test(tag)) x.setAttribute('style', `text-align:${ta}`);
-      if (tag === 'A' && !/^(https?:|mailto:|tel:|\{\{)/i.test(x.getAttribute('href') || '')) { x.replaceWith(...x.childNodes); continue; }
-      if (tag === 'IMG' && !/^https?:/i.test(x.getAttribute('src') || '')) x.remove();
-    }
-  })(doc.body);
-  return doc.body.innerHTML.replace(/<!--[\s\S]*?-->/g, '');
-}
-// Whole imported templates keep their own layout; only anything that could run code is removed.
-function full(raw) {
-  const doc = new DOMParser().parseFromString(raw, 'text/html');
-  doc.querySelectorAll('script,iframe,object,embed,form,link[rel=stylesheet]').forEach(x => x.remove());
-  doc.querySelectorAll('*').forEach(x => [...x.attributes].forEach(a => { if (/^on/i.test(a.name) || /^\s*javascript:/i.test(a.value)) x.removeAttribute(a.name); }));
-  return '<!doctype html>' + doc.documentElement.outerHTML;
-}
-// Other platforms' unsubscribe and first-name tags become Brevo's.
-const tags = s => s
-  .replace(/\*\|UNSUB\|\*|\[link:subscription_unsubscribe_url\]|\{\{\s*unsubscribe(_url)?\s*\}\}|\[unsubscribe\]|%unsubscribe_url%/gi, '{{ unsubscribe }}')
-  .replace(/\*\|(FNAME|FIRST)\|\*|\{\{\s*first_?name\s*\}\}|\[first_?name\]/gi, 'there');
-const FOOT = '<p style="font:12px Arial,sans-serif;color:#777;text-align:center"><a href="{{ unsubscribe }}" style="color:#777">Unsubscribe</a></p>';
-const ensure = h => { h = tags(h); return /\{\{\s*unsubscribe\s*\}\}/.test(h) ? h : /<\/body>/i.test(h) ? h.replace(/<\/body>/i, () => FOOT + '</body>') : h + FOOT; };
-
-// ---------- turning what you wrote into the final email ----------
-function build() {
-  if (custom !== null) return ensure(custom);
-  const t = THEMES[theme], text = `font-family:${t.body};font-size:${t.size}px;line-height:1.65;color:${t.ink}`;
-  const doc = new DOMParser().parseFromString('<body>' + clean(ed.innerHTML) + '</body>', 'text/html');
-  const heads = (px, m) => `margin:${m};font:${t.hw} ${px}px/1.2 ${t.head};color:${t.ink}`;
-  const css = {
-    p: `margin:0 0 16px;${text}`, h1: heads(t.h1, '0 0 14px'), h2: heads(t.h2, '24px 0 10px'), h3: heads(t.h2 - 4, '20px 0 8px'), h4: heads(t.h2 - 6, '16px 0 6px'),
-    'ul,ol': `margin:0 0 16px;padding-left:24px;${text}`, li: 'margin:0 0 6px',
-    blockquote: `margin:0 0 16px;padding:4px 0 4px 16px;border-left:3px solid ${t.accent};${text}`,
-    hr: `border:0;border-top:1px solid ${t.rule};margin:24px 0`,
-    img: `display:block;max-width:100%;height:auto;border:0;margin:0 0 16px;border-radius:${t.r}px`,
-    table: 'width:100%;border-collapse:collapse', 'td,th': `padding:6px;vertical-align:top;${text}`,
-    a: `color:${t.link};text-decoration:underline`,
-  };
-  for (const [sel, c] of Object.entries(css)) doc.body.querySelectorAll(sel).forEach(x => x.setAttribute('style', c + ';' + (x.getAttribute('style') || '')));
-  doc.body.querySelectorAll('a[data-btn]').forEach(a => {
-    a.setAttribute('style', `display:inline-block;background:${t.accent};color:${t.btn};padding:14px 28px;border-radius:${t.r}px;font:700 16px ${t.body};text-decoration:none`);
-    a.removeAttribute('data-btn');
-  });
-  const border = t.line ? `border:${t.line}px solid ${t.ink};` : '', top = t.top ? `border-top:${t.top}px solid ${t.accent};` : '';
-  return ensure(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc($('subject').value)}</title></head>
-<body style="margin:0;padding:0;background:${t.bg}">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc($('pre').value)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${t.bg}"><tr><td align="center" style="padding:24px 12px">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:${t.card};border-radius:${t.r}px;${border}${top}"><tr><td style="padding:${t.pad}px;${text}">${doc.body.innerHTML}</td></tr></table>
-<p style="max-width:560px;margin:18px auto 0;font:12px/1.5 Arial,sans-serif;color:${t.mute};text-align:center">${esc($('footer').value)}<br><a href="{{ unsubscribe }}" style="color:${t.mute}">Unsubscribe</a></p>
-</td></tr></table></body></html>`);
-}
-
-function update() {
-  $('frame').srcdoc = build();
-  try { localStorage.setItem('draft', JSON.stringify({ subject: $('subject').value, pre: $('pre').value, footer: $('footer').value, theme, ed: ed.innerHTML, custom })); } catch {}
-}
-const changed = () => { clearTimeout(timer); timer = setTimeout(update, 300); };
-function showCustom() {
-  const c = custom !== null;
-  ed.hidden = c; $('bar').hidden = c; $('html').hidden = !c; $('customNote').hidden = !c;
-  if (c) $('html').value = custom;
-  document.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', !c && b.dataset.k === theme));
-  update();
-}
-
-// ---------- the editor ----------
-document.execCommand('defaultParagraphSeparator', false, 'p');
-const ex = (c, v) => { ed.focus(); document.execCommand(c, false, v); changed(); };
-const keep = () => { const s = getSelection(), r = s.rangeCount ? s.getRangeAt(0).cloneRange() : null; return () => { ed.focus(); if (r) { s.removeAllRanges(); s.addRange(r); } }; };
-const url = u => { u = (u || '').trim(); return /^(https?:|mailto:|tel:)/i.test(u) ? u : /^[\w-]+(\.[\w-]+)+(\/|$)/.test(u) ? 'https://' + u : ''; };
-
-async function embed() {
-  const back = keep(), u = url(prompt('Paste a Spotify, YouTube, SoundCloud or any link'));
-  if (!u) return;
-  msg('Fetching a preview...');
-  try {
-    const r = await api('embed', { url: u }); back();
-    ex('insertHTML', (r.image ? `<p><a href="${esc(u)}"><img src="${esc(r.image)}" alt="${esc(r.title)}"></a></p>` : '')
-      + (r.title ? `<h3>${esc(r.title)}</h3>` : '') + `<p style="text-align:center"><a data-btn href="${esc(u)}">${esc(r.cta)}</a></p>`);
-    msg('');
-  } catch (e) { msg(e.message, true); }
-}
-
-const TOOLS = [
-  ['B', () => ex('bold')], ['I', () => ex('italic')], ['U', () => ex('underline')], '|',
-  ['Title', () => ex('formatBlock', '<h1>')], ['Heading', () => ex('formatBlock', '<h2>')], ['Text', () => ex('formatBlock', '<p>')], '|',
-  ['List', () => ex('insertUnorderedList')], ['Quote', () => ex('formatBlock', '<blockquote>')], ['Left', () => ex('justifyLeft')], ['Center', () => ex('justifyCenter')], '|',
-  ['Link', () => { const b = keep(), u = url(prompt('Link address')); if (u) { b(); ex('createLink', u); } }],
-  ['Button', () => { const b = keep(), t = prompt('Button text', 'Listen now'), u = t && url(prompt('Where should it go?')); if (u) { b(); ex('insertHTML', `<p style="text-align:center"><a data-btn href="${esc(u)}">${esc(t)}</a></p>`); } }],
-  ['Image', () => { const b = keep(), u = url(prompt('Image address (it must be public online)')); if (u) { b(); ex('insertImage', u); } }],
-  ['Embed', embed], ['Divider', () => ex('insertHorizontalRule')], '|',
-  ['Import', () => $('imp').showModal()],
-];
-$('bar').append(...TOOLS.map(t => {
-  if (t === '|') return document.createElement('i');
-  const b = document.createElement('button');
-  b.type = 'button'; b.textContent = t[0]; b.onmousedown = e => e.preventDefault(); b.onclick = t[1];
-  return b;
-}));
-
-ed.addEventListener('input', changed);
-['subject', 'pre', 'footer'].forEach(id => $(id).addEventListener('input', changed));
-$('html').addEventListener('input', () => { custom = $('html').value; changed(); });
-$('backTheme').onclick = () => { custom = null; showCustom(); };
-ed.addEventListener('paste', ev => {
-  const h = ev.clipboardData.getData('text/html'), t = ev.clipboardData.getData('text/plain').trim();
-  if (h) { ev.preventDefault(); ex('insertHTML', clean(h)); }
-  else if (/^https?:\/\/\S+$/i.test(t)) { ev.preventDefault(); ex('insertHTML', `<a href="${esc(t)}">${esc(t)}</a>`); }
+// ---- email copy ----
+const read = () => ({
+  ...copy, subject: $('subject').value, preheader: $('pre').value, headline: $('headline').value, cta: $('cta').value,
+  paragraphs: $('body').value.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean),
 });
-
-// ---------- import a design ----------
-const impSource = async () => { const f = $('impFile').files[0]; return f ? await f.text() : $('impHtml').value; };
-$('impAs').onclick = async () => { const raw = await impSource(); if (!raw.trim()) return; custom = tags(full(raw)); $('imp').close(); showCustom(); msg('Design imported. Edit the HTML on the left, or switch back to a theme.'); };
-$('impEd').onclick = async () => {
-  const raw = await impSource(); if (!raw.trim()) return;
-  ed.innerHTML = clean(new DOMParser().parseFromString(tags(raw), 'text/html').body.innerHTML); custom = null;
-  $('imp').close(); showCustom(); msg('Text brought into the editor. Pick a theme to restyle it.');
+const fill = c => {
+  copy = c; $('subject').value = c.subject; $('pre').value = c.preheader; $('headline').value = c.headline;
+  $('body').value = c.paragraphs.join('\n\n'); $('cta').value = c.cta;
 };
-$('impX').onclick = () => $('imp').close();
+async function preview() {
+  try { $('frame').srcdoc = (await api('render', { copy: read() })).html; } catch (e) { msg(e.message, true); }
+}
+['subject', 'pre', 'headline', 'body', 'cta'].forEach(id =>
+  $(id).addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(preview, 500); }));
 
-// ---------- subscribers: find and remove duplicates before anything is stored ----------
+$('gen').onclick = async () => {
+  $('gen').disabled = true; msg('Writing your email...');
+  try {
+    const r = await api('generate', { link: $('link').value.trim(), prompt: $('notes').value, tone: $('tone').value });
+    fill(r.copy); $('frame').srcdoc = r.html; $('editor').hidden = false;
+    msg('Draft ready. Edit anything, send yourself a test, then start sending.');
+  } catch (e) { msg(e.message, true); }
+  $('gen').disabled = false;
+};
+
+// ---- subscribers: find and remove duplicates before anything is stored ----
 function parseEmails(text) {
   const found = text.match(/[^\s,;"'<>()[\]]+@[^\s,;"'<>()[\]]+/g) || [], rows = new Map();
   let invalid = 0, dupes = 0;
@@ -348,6 +145,7 @@ function parseEmails(text) {
   }
   return { rows: [...rows], found: found.length, invalid, dupes };
 }
+
 $('add').onclick = async () => {
   const f = $('file').files[0], text = (f ? await f.text() + '\n' : '') + $('paste').value;
   if (!text.trim()) return msg('Choose a file or paste some emails first', true);
@@ -356,57 +154,22 @@ $('add').onclick = async () => {
     const { rows, found, invalid, dupes } = parseEmails(text);
     let added = 0;
     for (let i = 0; i < rows.length; i += 2000) added += (await api('contacts', { rows: rows.slice(i, i + 2000) })).added;
-    $('report').textContent = `Found ${num(found)} addresses. Removed ${num(dupes)} duplicates and ${num(invalid)} invalid. ${num(rows.length - added)} were already on your list. Added ${num(added)} new.`;
+    $('report').textContent = `Found ${n(found)} addresses. Removed ${n(dupes)} duplicates and ${n(invalid)} invalid. ${n(rows.length - added)} were already on your list. Added ${n(added)} new.`;
     $('paste').value = ''; $('file').value = ''; msg(''); refresh();
   } catch (e) { msg(e.message, true); }
   $('add').disabled = false;
 };
-$('clear').onclick = async () => {
-  if (!confirm('Remove every subscriber from Dispatch and stop sending?')) return;
-  try { await api('reset', { clear: true }); msg('Subscriber list cleared.'); refresh(); } catch (e) { msg(e.message, true); }
-};
 
-// ---------- schedule ----------
-const toUtc = h => new Date(2000, 0, 1, h).getUTCHours();
-const toLocal = u => new Date(Date.UTC(2000, 0, 1, u)).getHours();
-const utcHour = () => toUtc(+$('hour').value);
-const addDay = (d, k) => new Date(Date.parse(d + 'T00:00:00Z') + k * 864e5).toISOString().slice(0, 10);
-const when = (d, time) => new Date(`${d}T${String(utcHour()).padStart(2, '0')}:00:00Z`).toLocaleString([], time
-  ? { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } : { weekday: 'short', day: 'numeric', month: 'short' });
-$('hour').innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${h}">${String(h).padStart(2, '0')}:00</option>`).join('');
-$('startDay').onchange = $('hour').onchange = () => S && renderPlan(S);
-
-function renderPlan(s) {
-  const start = $('startDay').value || s.today;
-  const rows = s.days.slice().reverse().map(d => ({ day: d.day, n: d.sent, st: 'Sent' }));
-  let day = start > s.today ? start : s.today;
-  if (s.importing) rows.push({ day: s.today, n: s.queued, st: 'Sending' });
-  if ((s.importing || s.sentToday >= s.limit) && day <= s.today) day = addDay(s.today, 1);
-  for (let left = s.pending; left > 0; left -= s.limit, day = addDay(day, 1)) rows.push({ day, n: Math.min(left, s.limit), st: day === s.today ? 'Today' : 'Scheduled' });
-  $('plan').innerHTML = rows.length
-    ? rows.map(r => `<li class="${r.st === 'Sent' ? 'done' : r.st === 'Scheduled' ? '' : 'hot'}"><span>${when(r.day, r.st !== 'Sent')}</span><b>${num(r.n)}</b><em>${r.st}</em></li>`).join('')
-    : '<li>Nothing scheduled yet. Add subscribers, then press Start sending.</li>';
-  return s.pending ? rows.at(-1).day : '';
-}
-
+// ---- sending ----
 async function refresh() {
   try {
-    const s = S = await api('status'), total = s.pending + s.queued + s.sent;
-    if (first) {
-      first = false;
-      $('startDay').value = s.startDay || new Date().toLocaleDateString('en-CA');
-      $('hour').value = toLocal(s.sendHour);
-      if (!$('footer').value) { $('footer').value = s.footer; update(); }
-    }
-    const finish = renderPlan(s);
-    $('prog').value = total ? s.sent / total : 0;
-    $('counts').textContent = total ? `${num(total)} on your list. ${num(s.sent)} emailed, ${num(s.pending + s.queued)} waiting.` : 'Nobody on the list yet.';
-    $('sum').textContent = total ? `${num(s.sent)} of ${num(total)} sent` : 'No subscribers yet';
-    $('sub').textContent = !total ? 'Add subscribers to see your plan.' : !s.pending && !s.queued ? 'Everyone on the list has been emailed.'
-      : finish ? `${num(s.pending + s.queued)} still waiting. On this plan everyone has it by ${new Date(finish + 'T12:00:00Z').toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}.` : 'The last batch is going out.';
-    $('state').textContent = s.active ? (s.importing ? 'Preparing today\'s batch' : `Running. Today ${num(s.sentToday)} of ${num(s.limit)}`) : (s.sent && s.pending ? 'Paused' : 'Not started');
-    $('go').textContent = s.active ? 'Running' : s.sent && s.pending ? 'Resume sending' : 'Start sending';
-    $('go').disabled = s.active;
+    const s = await api('status'), total = s.pending + s.queued + s.sent, hh = String(s.sendHour).padStart(2, '0');
+    $('bar').value = total ? s.sent / total : 0;
+    let line = !total ? 'No subscribers yet.' : `${n(s.sent)} of ${n(total)} sent. ${n(s.pending)} waiting. Today: ${n(s.sentToday)} of ${n(s.limit)}.`;
+    if (s.queued) line += ` ${n(s.queued)} in the current batch.`;
+    if (total) line += s.active ? (s.importing ? ' Preparing today\'s batch.' : s.sentToday >= s.limit ? ` Today's batch is done. Next one at ${hh}:00 UTC.` : ` Running. Daily batch goes at ${hh}:00 UTC.`) : (!s.pending && s.sent ? ' List complete.' : ' Paused.');
+    $('stat').textContent = line;
+    $('go').textContent = s.active ? 'Sending' : (s.sent && s.pending ? 'Resume sending' : 'Start sending');
     if (s.error) msg(s.error, true);
   } catch {}
 }
@@ -414,33 +177,29 @@ async function refresh() {
 $('test').onclick = async () => {
   if (!$('testTo').value) return msg('Enter an email address for the test', true);
   msg('Sending test...');
-  try { await api('test', { subject: $('subject').value.trim(), html: build(), to: $('testTo').value }); msg('Test sent. Check your inbox and spam folder.'); }
+  try { await api('test', { copy: read(), to: $('testTo').value }); msg('Test sent. Check your inbox and spam folder.'); }
   catch (e) { msg(e.message, true); }
 };
 $('go').onclick = async () => {
   try {
-    const r = await api('start', { subject: $('subject').value.trim(), html: build(), startDay: $('startDay').value, sendHour: utcHour() });
-    msg(r.resumed ? 'Resumed. Sending continues with the saved email.' : 'Scheduled. The first batch goes out at the time you picked.'); refresh();
+    const r = await api('start', { copy: read() });
+    msg(r.resumed ? 'Resumed. Sending continues with the saved email.' : 'Started. Today\'s batch is going out now, then one batch every morning until everyone has it.');
+    refresh();
   } catch (e) { msg(e.message, true); }
 };
-$('pause').onclick = async () => { try { await api('pause', {}); msg('Paused. Nothing more goes out until you resume.'); refresh(); } catch (e) { msg(e.message, true); } };
+$('pause').onclick = async () => { try { await api('pause', {}); msg('Paused. Nothing more will go out until you resume.'); refresh(); } catch (e) { msg(e.message, true); } };
 $('redo').onclick = async () => {
   if (!confirm('Start over? Everyone goes back to waiting, so people who already got the email will get it again.')) return;
-  try { await api('reset', {}); msg('Reset. Edit your email if you like, then press Start sending.'); refresh(); } catch (e) { msg(e.message, true); }
+  try { await api('reset', {}); msg('Reset. Write or edit your email and press Start sending.'); refresh(); } catch (e) { msg(e.message, true); }
+};
+$('clear').onclick = async () => {
+  if (!confirm('Remove every subscriber from this app and stop sending? Your Brevo contacts are not touched.')) return;
+  try { await api('reset', { clear: true }); msg('Subscriber list cleared.'); refresh(); } catch (e) { msg(e.message, true); }
 };
 
-// ---------- start ----------
-try {
-  const d = JSON.parse(localStorage.getItem('draft') || 'null');
-  if (d) {
-    $('subject').value = d.subject || ''; $('pre').value = d.pre || ''; $('footer').value = d.footer || ''; ed.innerHTML = d.ed || '';
-    theme = THEMES[d.theme] ? d.theme : theme; custom = d.custom ?? null;
-  }
-} catch {}
-showCustom();
 (async () => {
   pw = pw || prompt('App password') || '';
-  try { await api('status'); sessionStorage.setItem('pw', pw); await refresh(); setInterval(refresh, 20000); }
+  try { await api('status'); sessionStorage.setItem('pw', pw); refresh(); setInterval(refresh, 20000); }
   catch (e) { sessionStorage.removeItem('pw'); msg(`${e.message}. Reload to try again.`, true); }
 })();
 </script>
